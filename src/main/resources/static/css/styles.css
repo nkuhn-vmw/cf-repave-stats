@@ -322,11 +322,60 @@ body {
 }
 
 /* History Table */
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
 .history-section h2 {
     font-size: 1rem;
     font-weight: 500;
-    margin-bottom: 12px;
     color: var(--text-secondary);
+}
+
+.instance-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.instance-filter select {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.instance-filter select.filter-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.btn-clear-filter {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-clear-filter:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.history-table tr.filtered-out {
+    display: none;
 }
 
 .history-table {

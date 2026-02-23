@@ -98,7 +98,16 @@
             </div>
 
             <div class="history-section">
-                <h2>Response History</h2>
+                <div class="history-header">
+                    <h2>Response History</h2>
+                    <div class="instance-filter">
+                        <label for="instanceFilter">Filter Instance:</label>
+                        <select id="instanceFilter">
+                            <option value="all" selected>All Instances</option>
+                        </select>
+                        <button class="btn-clear-filter" id="clearFilter" title="Clear filter" style="display:none;">Clear</button>
+                    </div>
+                </div>
                 <table class="history-table">
                     <thead>
                         <tr>

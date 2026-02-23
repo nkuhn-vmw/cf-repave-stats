@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var MAX_HISTORY = 25;
+    var MAX_HISTORY = 50;
     var INSTANCE_COLORS = [
         '#6c8cff', '#f472b6', '#4ade80', '#fbbf24',
         '#a78bfa', '#fb923c', '#22d3ee', '#f87171'
@@ -51,6 +51,33 @@
         return mb + ' MB';
     }
 
+    function getActiveFilter() {
+        var val = $('#instanceFilter').value;
+        return val === 'all' ? null : val;
+    }
+
+    // Keep the filter dropdown in sync with discovered instances
+    function updateFilterDropdown(instanceIndex) {
+        if (seenInstances[instanceIndex]) return;
+        seenInstances[instanceIndex] = true;
+
+        var select = $('#instanceFilter');
+        var indices = Object.keys(seenInstances).sort(function (a, b) {
+            return parseInt(a, 10) - parseInt(b, 10);
+        });
+
+        // Rebuild options preserving current selection
+        var current = select.value;
+        var html = '<option value="all">All Instances</option>';
+        indices.forEach(function (idx) {
+            html += '<option value="' + idx + '">Instance ' + idx + '</option>';
+        });
+        select.innerHTML = html;
+        select.value = current;
+        // If the previous selection is gone (shouldn't happen), reset
+        if (select.value !== current) select.value = 'all';
+    }
+
     function updateInstanceDisplay(data) {
         var color = getInstanceColor(data.instanceIndex);
 
@@ -65,12 +92,10 @@
         $('#appName').textContent = data.appName;
         $('#appId').textContent = data.appId;
 
-        // Track unique instances seen
-        seenInstances[data.instanceIndex] = true;
+        updateFilterDropdown(data.instanceIndex);
         var count = Object.keys(seenInstances).length;
         $('#statInstances').textContent = count;
 
-        // Resource stats
         $('#statMemLimit').textContent = formatMb(data.memoryLimitMb);
         $('#statMemUsed').textContent = formatMb(data.memoryUsedMb);
         $('#statDiskLimit').textContent = formatMb(data.diskLimitMb);
@@ -85,9 +110,11 @@
 
         var tbody = $('#historyBody');
         var color = getInstanceColor(data.instanceIndex);
+        var filter = getActiveFilter();
 
         var row = document.createElement('tr');
         row.classList.add('highlight');
+        row.setAttribute('data-instance', data.instanceIndex);
         row.innerHTML =
             '<td>' + formatTime(data.timestamp) + '</td>' +
             '<td><span class="instance-tag" style="background:' + color + '">' + data.instanceIndex + '</span></td>' +
@@ -95,11 +122,41 @@
             '<td>' + data.instanceIp + '</td>' +
             '<td>' + formatUptime(data.uptimeSeconds) + '</td>';
 
+        // Hide if doesn't match active filter
+        if (filter !== null && data.instanceIndex !== filter) {
+            row.classList.add('filtered-out');
+        }
+
         tbody.insertBefore(row, tbody.firstChild);
 
         while (tbody.children.length > MAX_HISTORY) {
             tbody.removeChild(tbody.lastChild);
         }
+    }
+
+    function applyFilter() {
+        var filter = getActiveFilter();
+        var select = $('#instanceFilter');
+        var clearBtn = $('#clearFilter');
+
+        if (filter !== null) {
+            select.classList.add('filter-active');
+            clearBtn.style.display = '';
+        } else {
+            select.classList.remove('filter-active');
+            clearBtn.style.display = 'none';
+        }
+
+        // Show/hide existing rows
+        var rows = $$('#historyBody tr');
+        rows.forEach(function (row) {
+            var idx = row.getAttribute('data-instance');
+            if (filter === null || idx === filter) {
+                row.classList.remove('filtered-out');
+            } else {
+                row.classList.add('filtered-out');
+            }
+        });
     }
 
     function setStatus(ok) {
@@ -115,7 +172,18 @@
     }
 
     function fetchInstance() {
-        fetch('/api/instance')
+        var filter = getActiveFilter();
+        var opts = {};
+
+        // Use CF routing header to pin to a specific instance
+        if (filter !== null) {
+            var appId = $('#appId').textContent;
+            if (appId && appId !== '-' && appId !== 'local-dev') {
+                opts.headers = { 'X-Cf-App-Instance': appId + ':' + filter };
+            }
+        }
+
+        fetch('/api/instance', opts)
             .then(function (res) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
@@ -214,13 +282,24 @@
         }
     });
 
-    // Interval dropdown change — restart polling only if auto-refresh is on
+    // Interval dropdown change
     $('#refreshInterval').addEventListener('change', function () {
         if ($('#autoRefreshToggle').checked) {
             startPolling();
         }
     });
 
-    // Initial fetch only — no auto-refresh until checkbox is checked
+    // Instance filter change
+    $('#instanceFilter').addEventListener('change', function () {
+        applyFilter();
+    });
+
+    // Clear filter button
+    $('#clearFilter').addEventListener('click', function () {
+        $('#instanceFilter').value = 'all';
+        applyFilter();
+    });
+
+    // Initial fetch only
     fetchInstance();
 })();
