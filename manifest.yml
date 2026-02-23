@@ -1,0 +1,13 @@
+---
+applications:
+  - name: cf-repave-stats
+    memory: 1G
+    instances: 3
+    random-route: true
+    buildpacks:
+      - java_buildpack_offline
+    path: target/cf-repave-stats-0.0.1-SNAPSHOT.jar
+    env:
+      JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 17.+ } }'
+    health-check-type: http
+    health-check-http-endpoint: /actuator/health
